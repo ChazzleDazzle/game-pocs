@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pong Brick Breaker — POC</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a2e;
+      font-family: system-ui, sans-serif;
+      color: #eee;
+    }
+    h1 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    .scores {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+    .scores span { font-variant-numeric: tabular-nums; }
+    canvas {
+      display: block;
+      background: #16213e;
+      border-radius: 8px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    .controls {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: #888;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pong Brick Breaker</h1>
+  <div class="scores">
+    <span>P1: <strong id="score-p1">0</strong></span>
+    <span>P2: <strong id="score-p2">0</strong></span>
+  </div>
+  <canvas id="game" width="640" height="960"></canvas>
+  <p class="controls">P1: A / D (red ball) — P2: ← / → (blue ball) — First to 3 wins</p>
+  <script src="game.js"></script>
+</body>
+</html>
