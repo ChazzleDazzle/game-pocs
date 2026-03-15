@@ -31,6 +31,39 @@
   let particles = [];
   let keys = { a: false, d: false, ArrowLeft: false, ArrowRight: false };
 
+  let audioCtx = null;
+  function getAudioContext() {
+    if (audioCtx) return audioCtx;
+    if (typeof window.AudioContext === 'undefined' && typeof window.webkitAudioContext === 'undefined') return null;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function playBrickTwinkle() {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    const freq1 = 880;
+    const freq2 = 1318;
+    const freq3 = 1760;
+    const gain = 0.12;
+    const decay = 0.08;
+    [freq1, freq2, freq3].forEach(function (freq, i) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(gain, now + i * 0.03);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.03 + decay);
+      osc.start(now + i * 0.03);
+      osc.stop(now + i * 0.03 + decay + 0.01);
+    });
+  }
+
   function layout() {
     const cw = canvas.width;
     const ch = canvas.height;
@@ -201,6 +234,7 @@
           if (ball.x + ball.radius >= b.x && ball.x - ball.radius <= b.x + b.w &&
               ball.y + ball.radius >= b.y && ball.y - ball.radius <= b.y + b.h) {
             b.hit = true;
+            playBrickTwinkle();
             var bx = b.x + b.w / 2;
             var by = b.y + b.h / 2;
             spawnParticles(bx, by, b.color, 14, {
@@ -313,6 +347,8 @@
   }
 
   document.addEventListener('keydown', function (e) {
+    var ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') ctx.resume();
     if (e.key === 'a') keys.a = true;
     if (e.key === 'd') keys.d = true;
     if (e.key === 'ArrowLeft') { keys.ArrowLeft = true; e.preventDefault(); }
