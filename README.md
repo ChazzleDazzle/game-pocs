@@ -24,3 +24,7 @@ Side income from a shipped game—mobile (App Store / Play Store), desktop (Stea
 ## Platform / tech
 
 Platform and engine (Unity, Godot, web, etc.) are chosen per POC. No single stack is assumed.
+
+## Agent / AI instructions
+
+See [AGENTS.md](AGENTS.md) for rules and best practices when working in this repo with an AI agent.
