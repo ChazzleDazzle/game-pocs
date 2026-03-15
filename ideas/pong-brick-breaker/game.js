@@ -14,9 +14,13 @@
   const BRICK_ROWS = 8;
   const BRICK_PADDING = 4;
   const WIN_SCORE = 3;
+  const BASE_BALL_SPEED = 5;
+  const MAX_BALL_SPEED = 10;
+  const PADDLE_BOOST_FACTOR = 1.06;
 
+  const TRAIL_LENGTH = 28;
   function makeBall() {
-    return { x: 0, y: 0, vx: 0, vy: 0, radius: BALL_RADIUS };
+    return { x: 0, y: 0, vx: 0, vy: 0, radius: BALL_RADIUS, trail: [] };
   }
   let ball1 = makeBall();
   let ball2 = makeBall();
@@ -25,6 +29,8 @@
   let bricks = [];
   let scoreP1 = 0;
   let scoreP2 = 0;
+  let combo1 = 0;
+  let combo2 = 0;
   let state = 'serve'; // 'serve' | 'play' | 'matchover'
   let serveTimer = 1200;
   let winner = null;
@@ -75,6 +81,8 @@
     ball1.y = paddle1.y - PADDLE_MARGIN - BALL_RADIUS * 2;
     ball2.x = cw / 2 + 24;
     ball2.y = paddle2.y + paddle2.h + PADDLE_MARGIN + BALL_RADIUS * 2;
+    ball1.trail = [];
+    ball2.trail = [];
   }
 
   function buildBricks() {
@@ -129,6 +137,8 @@
   function startRound() {
     state = 'serve';
     serveTimer = 1200;
+    combo1 = 0;
+    combo2 = 0;
     layout();
     buildBricks();
     ball1.vx = 0;
@@ -144,9 +154,8 @@
   }
 
   function serveBalls() {
-    const speed = 5;
-    setBallSpeed(ball1, (Math.random() - 0.5) * 4, -3 - Math.random() * 2, speed);
-    setBallSpeed(ball2, (Math.random() - 0.5) * 4, 3 + Math.random() * 2, speed);
+    setBallSpeed(ball1, (Math.random() - 0.5) * 4, -3 - Math.random() * 2, BASE_BALL_SPEED);
+    setBallSpeed(ball2, (Math.random() - 0.5) * 4, 3 + Math.random() * 2, BASE_BALL_SPEED);
     state = 'play';
   }
 
@@ -154,14 +163,18 @@
     const cw = canvas.width;
     ball1.x = cw / 2 + (Math.random() - 0.5) * 80;
     ball1.y = paddle1.y - PADDLE_MARGIN - BALL_RADIUS * 2;
-    setBallSpeed(ball1, (Math.random() - 0.5) * 4, -3 - Math.random() * 2, 5);
+    ball1.trail = [];
+    combo1 = 0;
+    setBallSpeed(ball1, (Math.random() - 0.5) * 4, -3 - Math.random() * 2, BASE_BALL_SPEED);
   }
 
   function respawnBall2() {
     const cw = canvas.width;
     ball2.x = cw / 2 + (Math.random() - 0.5) * 80;
     ball2.y = paddle2.y + paddle2.h + PADDLE_MARGIN + BALL_RADIUS * 2;
-    setBallSpeed(ball2, (Math.random() - 0.5) * 4, 3 + Math.random() * 2, 5);
+    ball2.trail = [];
+    combo2 = 0;
+    setBallSpeed(ball2, (Math.random() - 0.5) * 4, 3 + Math.random() * 2, BASE_BALL_SPEED);
   }
 
   function goal(scorer, ballX, ballY) {
@@ -204,6 +217,8 @@
       clampPaddle(paddle2);
 
       for (const ball of [ball1, ball2]) {
+        ball.trail.push({ x: ball.x, y: ball.y });
+        if (ball.trail.length > TRAIL_LENGTH) ball.trail.shift();
         ball.x += ball.vx;
         ball.y += ball.vy;
 
@@ -218,6 +233,12 @@
             ball.y = paddle2.y + paddle2.h + ball.radius;
             const hit = (ball.x - (paddle2.x + paddle2.w / 2)) / (paddle2.w / 2);
             ball.vx += hit * 1.5;
+            if (ball === ball2) {
+              combo2 = Math.min(10, combo2 + 1);
+              const len = Math.hypot(ball.vx, ball.vy);
+              const newLen = Math.min(MAX_BALL_SPEED, len * PADDLE_BOOST_FACTOR);
+              if (len > 0) { ball.vx = (ball.vx / len) * newLen; ball.vy = (ball.vy / len) * newLen; }
+            }
           }
         }
         if (ball.y + ball.radius >= paddle1.y && ball.vy > 0) {
@@ -226,6 +247,12 @@
             ball.y = paddle1.y - ball.radius;
             const hit = (ball.x - (paddle1.x + paddle1.w / 2)) / (paddle1.w / 2);
             ball.vx += hit * 1.5;
+            if (ball === ball1) {
+              combo1 = Math.min(10, combo1 + 1);
+              const len = Math.hypot(ball.vx, ball.vy);
+              const newLen = Math.min(MAX_BALL_SPEED, len * PADDLE_BOOST_FACTOR);
+              if (len > 0) { ball.vx = (ball.vx / len) * newLen; ball.vy = (ball.vy / len) * newLen; }
+            }
           }
         }
 
@@ -304,6 +331,22 @@
       ctx.fillRect(b.x, b.y, b.w, b.h);
     }
 
+    function drawBallTrail(ball, color) {
+      var n = ball.trail.length;
+      for (var i = 0; i < n; i++) {
+        var t = ball.trail[i];
+        var alpha = (i + 1) / (n + 1);
+        var r = ball.radius * (0.3 + 0.7 * alpha);
+        ctx.globalAlpha = alpha * alpha;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    drawBallTrail(ball1, '#e94560');
+    drawBallTrail(ball2, '#4a9eff');
     ctx.fillStyle = '#e94560';
     ctx.beginPath();
     ctx.arc(ball1.x, ball1.y, ball1.radius, 0, Math.PI * 2);
@@ -323,6 +366,23 @@
 
     scoreP1El.textContent = scoreP1;
     scoreP2El.textContent = scoreP2;
+
+    function comboStyle(combo) {
+      var colors = ['#666', '#5cdb95', '#7bed9f', '#ffeaa7', '#fdcb6e', '#fab1a0', '#ff7675', '#e17055', '#d63031', '#e84393', '#ffd93d'];
+      var size = 14 + combo * 5;
+      return { color: colors[Math.min(combo, 10)], size: size };
+    }
+    function drawCombo(combo, x, y) {
+      if (combo <= 0) return;
+      var s = comboStyle(combo);
+      ctx.fillStyle = s.color;
+      ctx.font = 'bold ' + s.size + 'px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('+' + (combo * 100) + ' speed', x, y);
+    }
+    drawCombo(combo1, canvas.width / 2, paddle1.y - 28);
+    drawCombo(combo2, canvas.width / 2, paddle2.y + paddle2.h + 28);
 
     if (state === 'serve') {
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
